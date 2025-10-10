@@ -1,0 +1,506 @@
+#!/usr/bin/env python3
+import Crypto
+import configparser
+from QrzApi import QrzApi
+from Qso import Qso
+from Cat import Cat
+from Cat import bands, modes
+from LastQSOs import LastQSOs
+from ConfigWindow import ConfigWindow
+from LogDatabase import LogDatabase as Db
+from pathlib import Path
+from datetime import datetime, timezone
+from tkinter import *
+from tkinter import filedialog
+from tkinter import messagebox
+
+
+appVersion = "0.1"
+app = Tk()
+app.title('QSO Log Book by W9EN - v' + appVersion)
+
+
+# Some global variables
+band_var = StringVar(app)
+band_var.set(bands[0]) # default value
+
+mode_var = StringVar(app)
+mode_var.set(modes[0]) # default value
+
+propModes = ["Other", "F2", "Tropo", "E-Skip", "Meteor Scatter", "Aurora", "Sporadic E", "Rain Scatter", "Satellite", "EME"]
+propMode_var = StringVar(app)
+propMode_var.set(propModes[0]) # default value
+
+ldb = None
+qrz_logged_in = False
+qrz = None
+cat_connected = False
+cat = None
+
+
+# Application exit function
+def app_exit():
+    close = messagebox.askyesno("Exit?", "Are you sure you want to exit the application?", parent=app)
+    if close:
+        ldb.close()
+        if cat and cat_connected:
+            cat.disconnect()
+        app.destroy()
+
+app.protocol("WM_DELETE_WINDOW", app_exit)
+
+
+# Message box functions
+def showInfo(message):
+    response = messagebox.showinfo("Status", message, parent=app)
+    return response
+
+def showWarning(message):
+    response = messagebox.showwarning("Warning", message, parent=app)
+    return response
+
+def showError(message):
+    response = messagebox.showerror("Error", message, parent=app)
+    return response
+
+
+# Read config file
+config = configparser.ConfigParser()
+config_file = 'config.ini'
+if Path(config_file).exists():
+    config.read(config_file)
+else:
+    showError("No config file found. Please create a config.ini file.")
+
+
+# Open the Log Database
+if 'MY_DETAILS' in config and 'my_grid' in config['MY_DETAILS']:
+    my_grid = config['MY_DETAILS']['my_grid']
+    ldb = Db(my_grid)
+else:
+    showWarning("Config file is missing my_grid. Please update the config.ini file.")
+    ldb = Db()  # Use default values
+
+
+# QRZ Login
+def qrz_login():
+    global qrz_logged_in, qrz
+    if 'QRZ' not in config or 'username' not in config['QRZ'] or 'password' not in config['QRZ']:
+        showWarning("Config file is missing QRZ username or password. Please update the config.ini file.")
+        return
+    try:
+        qrz = QrzApi(config)
+        qrz_logged_in = qrz.login()
+        if qrz_logged_in:
+            showInfo("Successfully logged into QRZ.com")
+        else:
+            showError(f"Failed to log into QRZ. Please check your credentials.")
+    except Exception as e:
+        showError(f"An error occurred during QRZ login: {str(e)}")
+
+
+# CAT Connect
+def cat_connect():
+    global cat_connected, cat
+    config.read(config_file)
+    try:
+        cat = Cat(config)
+        cat_connected = cat.connect()
+        if cat_connected:
+            showInfo(f"Successfully connected {cat._com_port} at {cat._baudrate} baud.")
+        else:
+            showError("CAT Connect", f"Failed to connect on {cat._com_port}.")
+    except Exception as e:
+        showError("CAT Connect", f"An error occurred during CAT connection: {str(e)}")
+
+
+# Menu functions
+def import_log():
+    adif_file = filedialog.askopenfilename(initialdir=".", title="Select .adi File", filetypes=(("adif files", "*.adi"), ("all files", "*.*")))
+    # Create a popup telling the user that the import is in progress
+    popup = Toplevel(app)
+    popup.title("Importing Log")
+    Label(popup, text="Importing ADIF log, please wait...").pack(padx=20, pady=20)
+    app.update_idletasks()  # Ensure the popup is drawn before starting the import
+
+    success, reason = ldb.import_from_adif(adif_file)
+    popup.destroy()  # Close the popup after import is done
+    if success:
+        showInfo("ADIF log imported successfully.")
+        clear_entries()
+    else:
+        showError(f"Failed to import ADIF log: {reason}")
+
+def export_log():
+    adif_file = filedialog.asksaveasfilename(initialdir=".", title="Save .adi File", defaultextension=".adi", filetypes=(("adif files", "*.adi"), ("all files", "*.*")))
+    # Create a popup telling the user that the imporexport is in progress
+    popup = Toplevel(app)
+    popup.title("Exporting Log")
+    Label(popup, text="Exporting ADIF log, please wait...").pack(padx=20, pady=20)
+    app.update_idletasks()  # Ensure the popup is drawn before starting the export
+
+    success, reason = ldb.export_to_adif(adif_file, appVersion)
+    popup.destroy()  # Close the popup after export is done
+    if success:
+        showInfo("ADIF log exported successfully.")
+    else:
+        showError(f"Failed to export ADIF log: {reason}")
+
+def config_settings():
+    global qrz_logged_in, qrz, cat_connected, cat
+    dlg = ConfigWindow(app, config)
+    app.wait_window(dlg.top)
+    # After the dialog is closed, reload the config
+    if qrz and qrz_logged_in:
+        qrz.reload_config(config)
+        qrz_logged_in = qrz.login()
+        if qrz_logged_in:
+            showInfo("Successfully re-logged into QRZ.com")
+        else:
+            showError(f"Failed to re-log into QRZ. Please check your credentials.")
+    # If CAT was connected, reconnect with new settings
+    if cat and cat_connected:
+        if cat.reload_config(config):
+            showInfo(f"Successfully reconnected {cat._com_port} at {cat._baudrate} baud.")
+        else:
+            showError(f"Failed to reconnect on {cat._com_port}.")
+    # Update my_grid in the database if it was changed
+    if 'MY_DETAILS' in config and 'my_grid' in config['MY_DETAILS']:
+        new_grid = config['MY_DETAILS']['my_grid']
+        ldb.update_my_grid(new_grid)
+    else:
+        showWarning("Config file is missing my_grid. Please update the config.ini file.")
+
+
+# Create the File menu
+menubar = Menu(app)
+file_menu = Menu(menubar, tearoff=0)
+file_menu.add_command(label="Import ADIF", command=import_log)
+file_menu.add_command(label="Export ADIF", command=export_log)
+file_menu.add_separator()
+file_menu.add_command(label="Exit", command=app_exit)
+menubar.add_cascade(label="File", menu=file_menu)
+
+# Create the Connect menu
+connect_menu = Menu(menubar, tearoff=0)
+connect_menu.add_command(label="Connect CAT", command=cat_connect)
+connect_menu.add_command(label="Connect QRZ", command=qrz_login)
+menubar.add_cascade(label="Connect", menu=connect_menu)
+
+# Create the Config menu
+config_menu = Menu(menubar, tearoff=0)
+config_menu.add_command(label="Settings", command=config_settings)
+menubar.add_cascade(label="Config", menu=config_menu)
+
+# Root view
+previewFrame = LabelFrame(app, text="Recent Contacts", padx=5, pady=5)
+previewFrame.grid(row=0, column=0, padx=5, pady=5)  # Set the frame position
+
+qsoFrame = LabelFrame(app, text="QSO Entry", padx=5, pady=5)
+qsoFrame.grid(row=1, column=0, padx=5, pady=5)  # Set the frame position
+
+# QSO Entry Frame
+callsignLabel = Label(qsoFrame, text="Callsign")  # Create a label widget
+callsignLabel.grid(row=0, column=0)  # Put the label into the window
+callsignEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+callsignEntry.grid(row=1, column=0)  # Set the input box position
+
+nameLabel = Label(qsoFrame, text="Name")  # Create a label widget
+nameLabel.grid(row=0, column=1)  # Put the label into the window
+nameEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+nameEntry.grid(row=1, column=1)  # Set the input box position
+
+dateLabel = Label(qsoFrame, text="Date")  # Create a label widget
+dateLabel.grid(row=0, column=2)  # Put the label into the window
+dateEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+dateEntry.grid(row=1, column=2)  # Set the input box position
+
+timeLabel = Label(qsoFrame, text="Time")  # Create a label widget
+timeLabel.grid(row=0, column=3)  # Put the label into the window
+timeEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+timeEntry.grid(row=1, column=3)  # Set the input box position
+
+bandLabel = Label(qsoFrame, text="Band")  # Create a label widget
+bandLabel.grid(row=0, column=4)  # Put the label into the window
+bandDropdown = OptionMenu(qsoFrame, band_var, *bands)
+bandDropdown.grid(row=1, column=4, padx=5, pady=5)
+bandDropdown.config(width=6)
+
+modeLabel = Label(qsoFrame, text="Mode")  # Create a label widget
+modeLabel.grid(row=0, column=6)  # Put the label into the window
+modeDropdown = OptionMenu(qsoFrame, mode_var, *modes)
+modeDropdown.grid(row=1, column=6, padx=5, pady=5)
+modeDropdown.config(width=6)
+
+reportLabel = Label(qsoFrame, text="Report")  # Create a label widget
+reportLabel.grid(row=2, column=5)  # Put the label into the window
+reportEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+reportEntry.grid(row=3, column=5)  # Set the input box position
+
+propModeLabel = Label(qsoFrame, text="PropMode")  # Create a label widget
+propModeLabel.grid(row=0, column=7)  # Put the label into the window
+propModeDropdown = OptionMenu(qsoFrame, propMode_var, *propModes)
+propModeDropdown.grid(row=1, column=7, padx=5, pady=5)
+propModeDropdown.config(width=10)
+
+satelliteLabel = Label(qsoFrame, text="Satellite")  # Create a label widget
+satelliteLabel.grid(row=0, column=8)  # Put the label into the window
+satelliteEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+satelliteEntry.grid(row=1, column=8)  # Set the input box position  
+satelliteEntry.insert(0, "None")
+
+gridLabel = Label(qsoFrame, text="Grid")  # Create a label widget
+gridLabel.grid(row=2, column=0)  # Put the label into the window
+gridEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+gridEntry.grid(row=3, column=0)  # Set the input box position
+
+countyLabel = Label(qsoFrame, text="County")  # Create a label widget
+countyLabel.grid(row=2, column=1)  # Put the label into the window
+countyEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+countyEntry.grid(row=3, column=1)  # Set the input box position
+
+stateLabel = Label(qsoFrame, text="State")  # Create a label widget
+stateLabel.grid(row=2, column=2)  # Put the label into the window
+stateEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+stateEntry.grid(row=3, column=2)  # Set the input box position
+
+countryLabel = Label(qsoFrame, text="Country")  # Create a label widget
+countryLabel.grid(row=2, column=3)  # Put the label into the window
+countryEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+countryEntry.grid(row=3, column=3)  # Set the input box position
+
+cqLabel = Label(qsoFrame, text="CQ Zone")  # Create a label widget
+cqLabel.grid(row=2, column=4)  # Put the label into the window
+cqEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+cqEntry.grid(row=3, column=4)  # Set the input box position
+
+freqLabel = Label(qsoFrame, text="Freq MHz")  # Create a label widget
+freqLabel.grid(row=0, column=5)  # Put the label into the window
+freqEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+freqEntry.grid(row=1, column=5)  # Set the input box position
+
+remarksLabel = Label(qsoFrame, text="Remarks")  # Create a label widget
+remarksLabel.grid(row=2, column=6, columnspan=3)  # Put the label into the window
+remarksEntry = Entry(qsoFrame, width=40, borderwidth=5)  # Create an input box
+remarksEntry.grid(row=3, column=6, columnspan=3)  # Set the input box position
+
+qsoNumberEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+qsoNumberEntry.grid(row=5, column=8)  # Set the input box
+
+
+# Recent Contacts Frame
+last_qsos = LastQSOs(previewFrame, ldb.conn)
+last_qsos.pack(fill="both", expand=True)
+last_qsos.refresh()
+
+
+# Button function (Lookup)
+def lookup_call():
+    callsignEntry_value = callsignEntry.get().strip().upper()
+    if callsignEntry_value == "":
+        showWarning("Please enter a callsign to look up.")
+        return 
+    if not qrz_logged_in:
+        showWarning("Please log into QRZ first.")
+        return
+    callsignEntry.delete(0, END)
+    callsignEntry.insert(0, callsignEntry_value)
+    try:
+        result = qrz.lookup(callsignEntry_value)
+        call_info = result['Callsign']
+        nameEntry.delete(0, END)
+        if 'fname' in call_info and 'name' in call_info and call_info['fname'] is not None and call_info['name'] is not None:
+            nameEntry.insert(0, call_info.get('fname', '') + ' ' + call_info.get('name', ''))
+        gridEntry.delete(0, END)
+        if 'grid' in call_info and call_info['grid'] is not None:
+            gridEntry.insert(0, call_info.get('grid', ''))
+        countyEntry.delete(0, END)
+        if 'county' in call_info and call_info['county'] is not None:
+            countyEntry.insert(0, call_info.get('county', ''))
+        stateEntry.delete(0, END)
+        if 'state' in call_info and call_info['state'] is not None:
+            stateEntry.insert(0, call_info.get('state', ''))
+        countryEntry.delete(0, END)
+        if 'country' in call_info and call_info['country'] is not None:
+            countryEntry.insert(0, call_info.get('country', ''))
+        cqEntry.delete(0, END)
+        if 'cqzone' in call_info and call_info['cqzone'] is not None:
+            cqEntry.insert(0, call_info.get('cqzone', ''))
+        current_time = datetime.now(timezone.utc)
+        dateEntry.delete(0, END)
+        dateEntry.insert(0, current_time.strftime('%Y%m%d'))
+        timeEntry.delete(0, END)
+        timeEntry.insert(0, current_time.strftime('%H%M'))
+        if cat_connected:
+            freq, band, mode = cat.get_freq_band_mode()
+            print(f"Freq: {freq}, Band: {band}, Mode: {mode}")
+            freqEntry.delete(0, END)
+            freqEntry.insert(0, freq)
+            band_var.set(band)
+            mode_var.set(mode)
+        last_qsos.lookup(callsignEntry_value)
+    except Exception as e:
+        showError(f"An error occurred during QRZ lookup: {str(e)}")
+
+
+# Button function (Log QSO)
+def log_qso():
+    new_qso = Qso(
+        qso_id = qsoNumberEntry.get().strip(),
+        callsign = callsignEntry.get().strip().upper(),
+        name = nameEntry.get().strip(),
+        date = dateEntry.get().strip(),
+        time = timeEntry.get().strip(),
+        band = band_var.get(),
+        mode = mode_var.get(),
+        report = reportEntry.get().strip(),
+        prop_mode = propMode_var.get(),
+        satellite = satelliteEntry.get().strip(),
+        grid = gridEntry.get().strip().upper(),
+        county = countyEntry.get().strip(),
+        state = stateEntry.get().strip().upper(),
+        country = countryEntry.get().strip(),
+        cq = cqEntry.get().strip(),
+        freq = freqEntry.get().strip(),
+        remarks = remarksEntry.get().strip(),
+        my_grid = ldb.my_grid
+    )
+
+    if not new_qso.is_valid():
+        showWarning("Log QSO", "Please fill in at least Callsign, Date, Time, Band and Mode fields.")
+        return
+    try:
+        if int(new_qso.qso_id) > ldb.get_last_rowid():
+            ldb.insert_qso(new_qso)
+            showInfo("Log QSO", f"QSO with {new_qso.callsign} logged successfully.")
+        else:
+            ldb.update_qso(new_qso)
+            showInfo("Log QSO", f"QSO ID {new_qso.qso_id} updated successfully.")
+        if qrz_logged_in:
+            result, count, logid, reason = qrz.upload_qso(new_qso)
+            if result == "OK":
+                showInfo("Upload QSO", f"QSO uploaded to QRZ successfully (LogID={logid})")
+            else:
+                showError("Upload QSO", f"QSO upload failed, REASON= {reason})")
+        clear_entries()
+    except Exception as e:
+        showError("Log QSO Error", f"An error occurred while logging the QSO: {str(e)}")
+    
+
+# Button function (Clear)
+def clear_entries():
+    callsignEntry.delete(0, END)
+    nameEntry.delete(0, END)
+    dateEntry.delete(0, END)
+    timeEntry.delete(0, END)
+    band_var.set(bands[0])
+    mode_var.set(modes[0])
+    reportEntry.delete(0, END)
+    propMode_var.set(propModes[0])
+    satelliteEntry.delete(0, END)
+    satelliteEntry.insert(0, "None")
+    gridEntry.delete(0, END)
+    countyEntry.delete(0, END)
+    stateEntry.delete(0, END)
+    countryEntry.delete(0, END)
+    cqEntry.delete(0, END)
+    freqEntry.delete(0, END)
+    remarksEntry.delete(0, END)
+    qsoNumberEntry.delete(0, END)
+    qsoNumberEntry.insert(0, str(ldb.get_current_row_count() + 1))
+    last_qsos.refresh()
+
+
+def load_qso_from_db():
+    rowid = qsoNumberEntry.get().strip()
+    if rowid == "":
+        showWarning("Load QSO Entry", "Please enter a QSO number to load.")
+        return
+    try:
+        qso = ldb.fetch_qso_by_id(rowid)
+        if qso is None:
+            showWarning("Load QSO Entry", f"No QSO found with ID {rowid}.")
+            return
+        # Assuming the order of columns in the database matches the following:
+        # (rowid, Call, Name, Date, Time, Band, Mode, Report, PropMode, Satellite, Grid, County, State, Country, CQ, ITU, Remarks, My_Grid)
+        callsignEntry.delete(0, END)
+        callsignEntry.insert(0, qso[Db.columns.index("Call")])
+        nameEntry.delete(0, END)
+        nameEntry.insert(0, qso[Db.columns.index("Name")])
+        dateEntry.delete(0, END)
+        dateEntry.insert(0, qso[Db.columns.index("Date")])
+        timeEntry.delete(0, END)
+        timeEntry.insert(0, qso[Db.columns.index("Time")])
+        band_var.set(qso[Db.columns.index("Band")])
+        mode_var.set(qso[Db.columns.index("Mode")])
+        reportEntry.delete(0, END)
+        reportEntry.insert(0, qso[Db.columns.index("Report")])
+        propMode_var.set(qso[Db.columns.index("PropMode")])
+        satelliteEntry.delete(0, END)
+        satelliteEntry.insert(0, qso[Db.columns.index("Satellite")])
+        gridEntry.delete(0, END)
+        gridEntry.insert(0, qso[Db.columns.index("Grid")])
+        countyEntry.delete(0, END)
+        countyEntry.insert(0, qso[Db.columns.index("County")])
+        stateEntry.delete(0, END)
+        stateEntry.insert(0, qso[Db.columns.index("State")])
+        countryEntry.delete(0, END)
+        countryEntry.insert(0, qso[Db.columns.index("Country")])
+        cqEntry.delete(0, END)
+        cqEntry.insert(0, qso[Db.columns.index("CQ")])
+        freqEntry.delete(0, END)
+        freqEntry.insert(0, qso[Db.columns.index("Freq")])
+        remarksEntry.delete(0, END)
+        remarksEntry.insert(0, qso[Db.columns.index("Remarks")])
+    except Exception as e:
+        showError("Load QSO Entry", f"An error occurred while loading QSO: {str(e)}")
+
+def delete_qso_from_db():
+    rowid = qsoNumberEntry.get().strip()
+    if rowid == "":
+        showWarning("Delete QSO Entry", "Please enter a QSO number to delete.")
+        return
+    try:
+        qso = ldb.fetch_qso_by_id(rowid)
+        if qso is None:
+            showWarning("Delete QSO Entry", f"No QSO found with ID {rowid}.")
+            return
+        confirm = messagebox.askyesno("Delete QSO Entry", f"Are you sure you want to delete QSO ID {rowid}?", parent=app)
+        if confirm:
+            ldb.delete_qso(rowid)
+            showInfo("Delete QSO Entry", f"QSO ID {rowid} has been deleted.")
+            clear_entries()
+    except Exception as e:
+        showError("Delete QSO Entry", f"An error occurred while deleting QSO: {str(e)}")
+
+# Buttons
+lookupButton = Button(qsoFrame, text="Lookup", command=lookup_call)
+lookupButton.grid(row=5, column=0, padx=5, pady=5)
+lookupButton.config(width=10)
+
+logButton = Button(qsoFrame, text="Log QSO", command=log_qso)
+logButton.grid(row=5, column=1, padx=5, pady=5)
+logButton.config(width=10)
+
+clearButton = Button(qsoFrame, text="Clear", command=clear_entries)
+clearButton.grid(row=5, column=2, padx=5, pady=5)
+clearButton.config(width=10)
+
+loadButton = Button(qsoFrame, text="Edit Log Entry", command=load_qso_from_db)
+loadButton.grid(row=5, column=6, padx=5, pady=5)
+loadButton.config(width=10)
+
+loadButton = Button(qsoFrame, text="Delete Log Entry", command=delete_qso_from_db)
+loadButton.grid(row=5, column=7, padx=5, pady=5)
+loadButton.config(width=12)
+
+
+# Configure the menu bar
+app.config(menu=menubar)
+
+# Load initial data
+qsoNumberEntry.delete(0, END)
+qsoNumberEntry.insert(0, str(ldb.get_last_rowid() + 1))
+
+# Keep the window open
+app.mainloop()
