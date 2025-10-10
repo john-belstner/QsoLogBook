@@ -149,10 +149,7 @@ You’ll see the main GUI containing:
    - Use the *File* menu to import old logs or export for LoTW.
 
 6. **Upload to LoTW**  
-   - Export an ADIF file, then use **Lotw.py** to sign and upload:
-     ```bash
-     python3 Lotw.py mylog.adi
-     ```
+   - Coming soon.
 
 ---
 
