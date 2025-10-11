@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=QsoLogBook
+Comment=Amateur Radio Logbook Application
+Exec=qsologbook
+Icon=qsologbook
+Terminal=false
+Type=Application
+Categories=HamRadio;Utility;
+StartupNotify=true

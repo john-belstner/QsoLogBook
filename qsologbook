@@ -1,0 +1,3 @@
+#!/bin/bash
+cd ~/.local/share/QsoLogBook
+python3 QsoLogBook.py
