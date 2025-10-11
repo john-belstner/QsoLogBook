@@ -1,0 +1,14 @@
+# IDE
+*.code-workspace
+
+# Python cache
+__pycache__
+
+# INI Files
+*.ini
+
+# ADIF files
+*.adi 
+
+# SQlite3 files
+*.db

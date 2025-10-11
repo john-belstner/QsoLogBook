@@ -161,7 +161,7 @@ class QrzApi:
             # Parse response
             result = count = logid = reason = None
             qrz_resp = response.text.split("&")
-            print("QRZ Response:", qrz_resp)
+            #print("QRZ Response:", qrz_resp)
             for item in qrz_resp:
                 if item.lower().startswith("result="):
                     result = item[len("result="):].strip("\n")

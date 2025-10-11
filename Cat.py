@@ -33,23 +33,23 @@ class Cat:
             self._ser = serial.Serial(self._com_port, self._baudrate, timeout=1)
             time.sleep(0.200)  # Wait for the connection to establish
             if self._ser.is_open:
-                print(f"Connected to CAT Interface on {self._com_port} at {self._baudrate} baud.")
+                #print(f"Connected to CAT Interface on {self._com_port} at {self._baudrate} baud.")
                 return True
             else:
-                print(f"Failed to open serial port {self._com_port}.")
+                #print(f"Failed to open serial port {self._com_port}.")
                 return False
         except serial.SerialException as e:
-            print(f"Serial exception: {e}")
+            #print(f"Serial exception: {e}")
             return False
 
     def disconnect(self):
         if self._ser and self._ser.is_open:
             self._ser.close()
-            print("Disconnected from CAT Interface")
+            #print("Disconnected from CAT Interface")
 
     def get_freq_band_mode(self):
         if not self._ser or not self._ser.is_open:
-            print("Serial port is not open.")
+            #print("Serial port is not open.")
             return None, None
         else:
             self._ser.write(f"{self._freq_cmd};\n".encode("ascii"))
@@ -58,9 +58,9 @@ class Cat:
             time.sleep(0.300)  # Wait for the radio to respond
             if self._ser.in_waiting > 0:
                 response = self._ser.readline().decode("utf-8", errors="ignore").strip()
-                print("Received:", response)
+                #print("Received:", response)
             if response:
-                print(f"Raw response: {response}")
+                #print(f"Raw response: {response}")
                 freq = band = mode = None
                 parts = response.split(';')
                 for part in parts:
@@ -79,6 +79,6 @@ class Cat:
                                 mode = modes[mode_code]
                 return freq, band, mode
             else:
-                print("No response received.")
+                #print("No response received.")
                 return None, None
 

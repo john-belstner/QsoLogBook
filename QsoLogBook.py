@@ -333,7 +333,7 @@ def lookup_call():
         timeEntry.insert(0, current_time.strftime('%H%M'))
         if cat_connected:
             freq, band, mode = cat.get_freq_band_mode()
-            print(f"Freq: {freq}, Band: {band}, Mode: {mode}")
+            #print(f"Freq: {freq}, Band: {band}, Mode: {mode}")
             freqEntry.delete(0, END)
             freqEntry.insert(0, freq)
             band_var.set(band)
