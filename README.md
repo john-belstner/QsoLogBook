@@ -83,22 +83,22 @@ An example is included. Update with your callsign, credentials, and paths:
 
 ```ini
 [MY_DETAILS]
-call = W9XYZ
-name = John Doe
-addr = 123 N 4th St.
+call = W9VSC
+name = Donald Belstner
+addr = 727 Hillside Ct
 city = Cedarburg
 state = WI
 zip = 53012
 my_grid = EN53xh
 
 [QRZ]
-username = W9XYZ
+username = W9VSC
 password = 
 api_key  = 
 upload = True
 
 [LOTW]
-username = W9XYZ
+username = W9VSC
 password = 
 location = Home QTH
 upload = True 
