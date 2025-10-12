@@ -5,6 +5,10 @@ It manages station configuration, logs QSOs locally, integrates with **QRZ.com**
 
 ---
 
+![QsoLogBook Image](https://raw.githubusercontent.com/john-belstner/QsoLogBook/main/qsologbook_image.png)
+
+---
+
 ## 🧑‍💻 Author
 **John M. Belstner (W9EN)**  
 © 2025 – Open-source for educational and Amateur Radio use, GNU General Public License v3.0 (GPL-3.0)
