@@ -4,9 +4,6 @@
 # Python cache
 __pycache__
 
-# INI Files
-*.ini
-
 # ADIF files
 *.adi 
 
