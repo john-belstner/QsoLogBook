@@ -45,7 +45,7 @@ Section: utils
 Priority: optional
 Architecture: all
 Maintainer: John M. Belstner <john@w9en.com>
-Description: QsoLogBook - Amateur Radio logbook app (Tkinter + SQLite)
+Description: QsoLogBook - Amateur Radio Logbook Application (Tkinter + SQLite)
  Depends: python3 (>= 3.9), python3-tk, python3-requests, python3-cryptography, python3-serial, tqsl, desktop-file-utils, hicolor-icon-theme
 EOF
 
@@ -84,13 +84,13 @@ qsologbook (0.1-1) stable; urgency=low
 
   * Initial release.
 
- -- John M. Belstner <you@example.com>  Sat, 11 Oct 2025 12:00:00 -0700
+ -- John M. Belstner <john@w9en.com>  Sat, 11 Oct 2025 12:00:00 -0700
 EOF
 
 cat > $PKGDIR/usr/share/doc/${APP}/copyright << 'EOF'
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: QsoLogBook
-Source: https://github.com/yourname/QsoLogBook
+Source: https://github.com/john-belstner/QsoLogBook
 
 Files: *
 Copyright: 2025 John M. Belstner
