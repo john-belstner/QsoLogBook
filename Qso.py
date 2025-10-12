@@ -42,9 +42,9 @@ class Qso:
             adif_str += f"<mode:{len(self.mode)}>{self.mode} "
         if self.report:
             adif_str += f"<rst_rcvd:{len(self.report)}>{self.report} "
-        if self.prop_mode:
+        if self.prop_mode != "N/A":
             adif_str += f"<prop_mode:{len(self.prop_mode)}>{self.prop_mode} "
-        if self.satellite:
+        if self.satellite != "None":
             adif_str += f"<sat_name:{len(self.satellite)}>{self.satellite} "
         if self.grid:
             adif_str += f"<gridsquare:{len(self.grid)}>{self.grid} "

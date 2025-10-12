@@ -28,8 +28,7 @@ class ConfigWindow:
         self.config['LOTW']['username'] = self.lotwUsernameEntry.get().strip()
         self.config['LOTW']['password'] = Crypto.encrypt_text(self.lotwPasswordEntry.get().strip())
         self.config['LOTW']['location'] = self.locationEntry.get().strip()
-        self.config['LOTW']['certificate'] = self.certificateEntry.get().strip()
-        self.config['LOTW']['cert_password'] = Crypto.encrypt_text(self.certPasswordEntry.get().strip())
+        self.config['LOTW']['upload'] = str(self.lotwUploadVar.get())
         self.config['CAT']['com_port'] = self.comPortEntry.get().strip()
         self.config['CAT']['baudrate'] = self.baudrateEntry.get().strip()
         self.config['CAT']['freq_cmd'] = self.freqCmdEntry.get().strip()
@@ -38,6 +37,7 @@ class ConfigWindow:
         self.config['QRZ']['username'] = self.qrzUsernameEntry.get().strip()
         self.config['QRZ']['password'] = Crypto.encrypt_text(self.qrzPasswordEntry.get().strip())
         self.config['QRZ']['api_key'] = Crypto.encrypt_text(self.apiKeyEntry.get().strip())
+        self.config['QRZ']['upload'] = str(self.qrzUploadVar.get())
         with open('config.ini', 'w') as configfile:
             self.config.write(configfile)
         messagebox.showinfo("Settings Saved", "Configuration settings have been saved.", parent=self.top)
@@ -90,7 +90,7 @@ class ConfigWindow:
         self.myGridEntry.insert(0, self.config.get('MY_DETAILS', 'my_grid', fallback=""))
 
         self.lotwFrame = LabelFrame(self.top, text="LoTW Settings", padx=5, pady=5)
-        self.lotwFrame.grid(row=0, column=1, padx=5, pady=5)  # Set the frame position
+        self.lotwFrame.grid(row=0, column=2, padx=5, pady=5)  # Set the frame position
 
         self.lotwUsernameLabel = Label(self.lotwFrame, text="Username:")
         self.lotwUsernameLabel.grid(row=0, column=0, sticky=W)
@@ -111,21 +111,19 @@ class ConfigWindow:
         self.locationEntry.grid(row=2, column=1, padx=5, pady=2)
         self.locationEntry.insert(0, self.config.get('LOTW', 'location', fallback=""))  
 
-        self.certificateLabel = Label(self.lotwFrame, text="Certificate:")
-        self.certificateLabel.grid(row=3, column=0, sticky=W)
-        self.certificateEntry = Entry(self.lotwFrame, width=16)
-        self.certificateEntry.grid(row=3, column=1, padx=5, pady=2)
-        self.certificateEntry.insert(0, self.config.get('LOTW', 'certificate', fallback=""))
-
-        self.certPasswordLabel = Label(self.lotwFrame, text="Cert Password:")
-        self.certPasswordLabel.grid(row=4, column=0, sticky=W)
-#        self.certPasswordEntry = Entry(self.lotwFrame, width=16, show="*")
-        self.certPasswordEntry = Entry(self.lotwFrame, width=16)
-        self.certPasswordEntry.grid(row=4, column=1, padx=5, pady=2)
-        self.certPasswordEntry.insert(0, Crypto.decrypt_text(self.config.get('LOTW', 'cert_password', fallback="")))
+        upload_to_lotw = self.config.getboolean('LOTW', 'upload', fallback=False)
+        self.lotwUploadVar = BooleanVar(value=upload_to_lotw)
+        self.lotwUploadCheck = Checkbutton(
+            self.lotwFrame,
+            text="Upload QSOs to LoTW",
+            variable=self.lotwUploadVar,
+            onvalue=True,
+            offvalue=False
+        )
+        self.lotwUploadCheck.grid(row=5, column=0, columnspan=2, sticky="w", pady=(5, 0))
 
         self.catFrame = LabelFrame(self.top, text="CAT Interface Settings", padx=5, pady=5)
-        self.catFrame.grid(row=0, column=2, padx=5, pady=5)  # Set the frame position
+        self.catFrame.grid(row=1, column=0, padx=5, pady=5)  # Set the frame position
 
         self.comPortLabel = Label(self.catFrame, text="COM Port:")
         self.comPortLabel.grid(row=0, column=0, sticky=W)
@@ -158,7 +156,7 @@ class ConfigWindow:
         self.modeCmdEntry.insert(0, self.config.get('CAT', 'mode_cmd', fallback=""))
 
         self.qrzFrame = LabelFrame(self.top, text="QRZ.com Settings", padx=5, pady=5)
-        self.qrzFrame.grid(row=1, column=0, padx=5, pady=5)  # Set the frame position
+        self.qrzFrame.grid(row=0, column=1, padx=5, pady=5)  # Set the frame position
 
         self.qrzUsernameLabel = Label(self.qrzFrame, text="Username:")
         self.qrzUsernameLabel.grid(row=0, column=0, sticky=W)
@@ -179,6 +177,17 @@ class ConfigWindow:
         self.apiKeyEntry = Entry(self.qrzFrame, width=18)
         self.apiKeyEntry.grid(row=2, column=1, padx=5, pady=2)
         self.apiKeyEntry.insert(0, Crypto.decrypt_text(self.config.get('QRZ', 'api_key', fallback="")))
+
+        upload_to_qrz = self.config.getboolean('QRZ', 'upload', fallback=False)
+        self.qrzUploadVar = BooleanVar(value=upload_to_qrz)
+        self.qrzUploadCheck = Checkbutton(
+            self.qrzFrame,
+            text="Upload QSOs to QRZ.com",
+            variable=self.qrzUploadVar,
+            onvalue=True,
+            offvalue=False
+        )
+        self.qrzUploadCheck.grid(row=3, column=0, columnspan=2, sticky="w", pady=(5, 0))
 
         self.saveButton = Button(self.top, text="Save", command=self.save_config)
         self.saveButton.grid(row=1, column=1, columnspan=2, pady=10) # Centered below all frames

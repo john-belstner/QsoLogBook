@@ -9,3 +9,10 @@ __pycache__
 
 # SQlite3 files
 *.db
+
+# Jupyter Notebooks
+*.ipynb
+
+# LoTW
+*.p12
+*.tq8

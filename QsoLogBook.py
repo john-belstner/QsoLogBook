@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import Crypto
 import configparser
+import shutil
 from QrzApi import QrzApi
+from Lotw import Lotw
 from Qso import Qso
 from Cat import Cat
 from Cat import bands, modes
@@ -15,7 +16,7 @@ from tkinter import filedialog
 from tkinter import messagebox
 
 
-appVersion = "0.1"
+appVersion = "0.2"
 app = Tk()
 app.title('QSO Log Book by W9EN - v' + appVersion)
 
@@ -27,10 +28,11 @@ band_var.set(bands[0]) # default value
 mode_var = StringVar(app)
 mode_var.set(modes[0]) # default value
 
-propModes = ["Other", "F2", "Tropo", "E-Skip", "Meteor Scatter", "Aurora", "Sporadic E", "Rain Scatter", "Satellite", "EME"]
+propModes = ["N/A", "AS", "AUR", "BS", "EME", "ES", "F2", "GWAVE", "INTERNET", "LOS", "MS", "RPT", "SAT", "TR"]
 propMode_var = StringVar(app)
 propMode_var.set(propModes[0]) # default value
 
+lotw = None
 ldb = None
 qrz_logged_in = False
 qrz = None
@@ -80,6 +82,22 @@ if 'MY_DETAILS' in config and 'my_grid' in config['MY_DETAILS']:
 else:
     showWarning("Config file is missing my_grid. Please update the config.ini file.")
     ldb = Db()  # Use default values
+
+
+# LoTW Login
+def lotw_login():
+    global lotw
+    if 'LOTW' not in config or 'location' not in config['LOTW'] or 'upload' not in config['LOTW']:
+        showWarning("Config file is missing LOTW location or upload. Please update the config.ini file.")
+        return
+    if shutil.which("tqsl"):
+        showInfo("TQSL installation found in PATH.")
+    else:
+        showWarning("TQSL is NOT installed or not in PATH.")
+    try:
+        lotw = Lotw(config)
+    except Exception as e:
+        showError(f"An error occurred during LOTW class initialization: {str(e)}")
 
 
 # QRZ Login
@@ -164,6 +182,8 @@ def config_settings():
             showInfo(f"Successfully reconnected {cat._com_port} at {cat._baudrate} baud.")
         else:
             showError(f"Failed to reconnect on {cat._com_port}.")
+    if lotw:
+        lotw.reload_config(config)
     # Update my_grid in the database if it was changed
     if 'MY_DETAILS' in config and 'my_grid' in config['MY_DETAILS']:
         new_grid = config['MY_DETAILS']['my_grid']
@@ -185,6 +205,7 @@ menubar.add_cascade(label="File", menu=file_menu)
 connect_menu = Menu(menubar, tearoff=0)
 connect_menu.add_command(label="Connect CAT", command=cat_connect)
 connect_menu.add_command(label="Connect QRZ", command=qrz_login)
+connect_menu.add_command(label="Connect LoTW", command=lotw_login)
 menubar.add_cascade(label="Connect", menu=connect_menu)
 
 # Create the Config menu
@@ -372,19 +393,22 @@ def log_qso():
     try:
         if int(new_qso.qso_id) > ldb.get_last_rowid():
             ldb.insert_qso(new_qso)
-            showInfo("Log QSO", f"QSO with {new_qso.callsign} logged successfully.")
+            showInfo(f"QSO with {new_qso.callsign} logged successfully.")
         else:
             ldb.update_qso(new_qso)
-            showInfo("Log QSO", f"QSO ID {new_qso.qso_id} updated successfully.")
-        if qrz_logged_in:
+            showInfo(f"QSO ID {new_qso.qso_id} updated successfully.")
+        if qrz_logged_in and config.getboolean('QRZ', 'upload', fallback=False):
             result, count, logid, reason = qrz.upload_qso(new_qso)
             if result == "OK":
-                showInfo("Upload QSO", f"QSO uploaded to QRZ successfully (LogID={logid})")
+                showInfo(f"QSO uploaded to QRZ successfully (LogID={logid})")
             else:
-                showError("Upload QSO", f"QSO upload failed, REASON= {reason})")
-        clear_entries()
+                showError(f"QSO upload failed, REASON= {reason})")
+        if lotw and config.getboolean('LOTW', 'upload', fallback=False):
+            lotw.tqsl_sign_and_upload(new_qso.to_adif(), "compliant")
     except Exception as e:
-        showError("Log QSO Error", f"An error occurred while logging the QSO: {str(e)}")
+        showError(f"An error occurred while logging the QSO: {str(e)}")
+
+    clear_entries()
     
 
 # Button function (Clear)

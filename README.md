@@ -35,8 +35,8 @@ It manages station configuration, logs QSOs locally, integrates with **QRZ.com**
   - The encryption key is stored in your home directory at `~/.qsologbook.key` (permissions 600).
 
 - 🌐 **LoTW Upload Support**  
-  - Uses `tqsl` (TrustedQSL) command-line tool to sign ADIF files.  
-  - Automatically uploads to LoTW using RFC-1867 protocol.
+  - Uses local `tqsl` (TrustedQSL) command-line tool to sign and upload ADIF files.  
+  - Automatically uploads new QSOs to LoTW via TrustedQSL.
 
 - 🧭 **Graphical User Interface**
   - Built with Tkinter and ttk for a clean, cross-platform experience.  
@@ -95,13 +95,13 @@ my_grid = EN53xh
 username = W9XYZ
 password = 
 api_key  = 
+upload = True
 
 [LOTW]
 username = W9XYZ
 password = 
 location = Home QTH
-certificate = w9xyz.p12
-cert_password = 
+upload = True 
 
 [CAT]
 com_port = /dev/ttyUSB0
@@ -143,7 +143,7 @@ You’ll see the main GUI containing:
 3. **Log a QSO**  
    - Verify date/time (UTC) and band/mode fields.  
    - Click **Log QSO**.  
-   - The entry is stored in `qso_log.db` and optionally uploaded to QRZ.
+   - The entry is stored in `qso_log.db` and optionally uploaded to QRZ.com and LoTW.
 
 4. **Review and Edit**  
    - The “Recent Contacts” list shows the latest QSOs.  
@@ -151,9 +151,6 @@ You’ll see the main GUI containing:
 
 5. **Import / Export ADIF**  
    - Use the *File* menu to import old logs or export for LoTW.
-
-6. **Upload to LoTW**  
-   - Coming soon.
 
 ---
 
