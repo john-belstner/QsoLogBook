@@ -34,6 +34,7 @@ class ConfigWindow:
         self.config['CAT']['freq_cmd'] = self.freqCmdEntry.get().strip()
         self.config['CAT']['band_cmd'] = self.bandCmdEntry.get().strip()
         self.config['CAT']['mode_cmd'] = self.modeCmdEntry.get().strip()
+        self.config['CAT']['auto_con'] = str(self.autoConCatVar.get())
         self.config['QRZ']['username'] = self.qrzUsernameEntry.get().strip()
         self.config['QRZ']['password'] = Crypto.encrypt_text(self.qrzPasswordEntry.get().strip())
         self.config['QRZ']['api_key'] = Crypto.encrypt_text(self.apiKeyEntry.get().strip())
@@ -154,6 +155,17 @@ class ConfigWindow:
         self.modeCmdEntry = Entry(self.catFrame, width=16)
         self.modeCmdEntry.grid(row=4, column=1, padx=5, pady=2)
         self.modeCmdEntry.insert(0, self.config.get('CAT', 'mode_cmd', fallback=""))
+
+        auto_con_cat = self.config.getboolean('CAT', 'auto_con', fallback=False)
+        self.autoConCatVar = BooleanVar(value=auto_con_cat)
+        self.autoConCatCheck = Checkbutton(
+            self.catFrame,
+            text="Autoconnect to CAT",
+            variable=self.autoConCatVar,
+            onvalue=True,
+            offvalue=False
+        )
+        self.autoConCatCheck.grid(row=5, column=0, columnspan=2, sticky="w", pady=(5, 0))
 
         self.qrzFrame = LabelFrame(self.top, text="QRZ.com Settings", padx=5, pady=5)
         self.qrzFrame.grid(row=0, column=1, padx=5, pady=5)  # Set the frame position

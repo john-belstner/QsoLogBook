@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import configparser
 import shutil
+import time
 from QrzApi import QrzApi
 from Lotw import Lotw
 from Qso import Qso
@@ -16,7 +17,7 @@ from tkinter import filedialog
 from tkinter import messagebox
 
 
-appVersion = "0.2"
+appVersion = "0.3"
 app = Tk()
 app.title('QSO Log Book by W9EN - v' + appVersion)
 
@@ -103,6 +104,10 @@ def lotw_login():
 # QRZ Login
 def qrz_login():
     global qrz_logged_in, qrz
+    # Check if already logged in
+    if qrz and qrz_logged_in:
+        showInfo("Already logged into QRZ.com")
+        return
     if 'QRZ' not in config or 'username' not in config['QRZ'] or 'password' not in config['QRZ']:
         showWarning("Config file is missing QRZ username or password. Please update the config.ini file.")
         return
@@ -120,6 +125,10 @@ def qrz_login():
 # CAT Connect
 def cat_connect():
     global cat_connected, cat
+    # Check if already connected
+    if cat and cat_connected:
+        showInfo("Already connected to CAT")
+        return
     config.read(config_file)
     try:
         cat = Cat(config)
@@ -525,6 +534,17 @@ app.config(menu=menubar)
 # Load initial data
 qsoNumberEntry.delete(0, END)
 qsoNumberEntry.insert(0, str(ldb.get_last_rowid() + 1))
+
+app.attributes('-topmost', True)
+app.update()
+
+# Check auto connect and auto upload settings
+if config.get('CAT', 'auto_con'):
+    cat_connect()
+if config.get('QRZ', 'upload'):
+    qrz_login()
+if config.get('LOTW', 'upload'):
+    lotw_login()
 
 # Keep the window open
 app.mainloop()
