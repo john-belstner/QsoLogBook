@@ -8,9 +8,10 @@ class LastQSOs(ttk.Frame):
 
     COLUMNS = ("rowid", "Call", "Name", "Date", "Time", "Band", "Freq", "Mode", "Report", "Grid", "State", "Country")
 
-    def __init__(self, master, conn):
+    def __init__(self, master, conn, on_pick=None):
         super().__init__(master, padding=8)
         self.conn = conn
+        self.on_pick = on_pick
         self.font = tkfont.nametofont("TkDefaultFont")
         self.limit_var = tk.IntVar(value=10)
         self._build_ui()
@@ -81,6 +82,7 @@ class LastQSOs(ttk.Frame):
 
         self.tree.pack(side="left", fill="both", expand=True)
         vsb.pack(side="right", fill="y")
+        self.tree.bind("<<TreeviewSelect>>", self._on_select)
 
     def fetch_last_qsos(self, limit=10):
         # If datetime_utc is ISO-8601 text, simple ORDER BY works correctly.
@@ -102,6 +104,15 @@ class LastQSOs(ttk.Frame):
             LIMIT ?
         """
         return self.conn.execute(sql, (call,limit,)).fetchall()
+
+    def _on_select(self, event=None):
+        # Call the callback with the rowid of what we just selected
+        sel = self.tree.selection()
+        if not sel:
+            return
+        qso_id = int(self.tree.set(sel[0], "rowid"))
+        if self.on_pick:
+            self.on_pick(qso_id)
 
     def refresh(self):
         # Clear then repopulate with newest first

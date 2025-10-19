@@ -13,11 +13,12 @@ from LogDatabase import LogDatabase as Db
 from pathlib import Path
 from datetime import datetime, timezone
 from tkinter import *
+from tkinter import ttk
 from tkinter import filedialog
 from tkinter import messagebox
 
 
-appVersion = "0.3"
+appVersion = "0.4"
 app = Tk()
 app.title('QSO Log Book by W9EN - v' + appVersion)
 
@@ -65,6 +66,37 @@ def showWarning(message):
 def showError(message):
     response = messagebox.showerror("Error", message, parent=app)
     return response
+
+
+# A basic type-to-complete behavior for a ttk.Combobox in state='normal'
+def attach_autocomplete_to_combobox(cb, values):
+    type_buffer = {"last": 0}
+
+    def on_keyrelease(event):
+        # Ignore nav/control keys so we don't fight the user
+        if event.keysym in ("BackSpace","Left","Right","Home","End","Up","Down",
+                            "Return","Escape","Tab"):
+            return
+
+        typed = cb.get()
+        if not typed:
+            return
+
+        # Find first prefix match
+        match = next((v for v in values if v.lower().startswith(typed.lower())), None)
+        if match:
+            cb.set(match)
+            # put the cursor after what the user typed, and select the remainder
+            cb.icursor(len(typed))
+            cb.select_range(len(typed), "end")
+
+    cb.bind("<KeyRelease>", on_keyrelease)
+
+
+# To accommodate custom <Tab> order
+def focus_next_widget(event, next_widget):
+    next_widget.focus_set()
+    return "break"  # prevent default tab behavior
 
 
 # Read config file
@@ -136,9 +168,9 @@ def cat_connect():
         if cat_connected:
             showInfo(f"Successfully connected {cat._com_port} at {cat._baudrate} baud.")
         else:
-            showError("CAT Connect", f"Failed to connect on {cat._com_port}.")
+            showError(f"Failed to connect on {cat._com_port}.")
     except Exception as e:
-        showError("CAT Connect", f"An error occurred during CAT connection: {str(e)}")
+        showError(f"An error occurred during CAT connection: {str(e)}")
 
 
 # Menu functions
@@ -225,107 +257,168 @@ menubar.add_cascade(label="Config", menu=config_menu)
 # Root view
 previewFrame = LabelFrame(app, text="Recent Contacts", padx=5, pady=5)
 previewFrame.grid(row=0, column=0, padx=5, pady=5)  # Set the frame position
+previewFrame.grid_columnconfigure(0, minsize=972)
 
 qsoFrame = LabelFrame(app, text="QSO Entry", padx=5, pady=5)
 qsoFrame.grid(row=1, column=0, padx=5, pady=5)  # Set the frame position
+minColumnWidth = 106
+qsoFrame.grid_columnconfigure(0, minsize=minColumnWidth)
+qsoFrame.grid_columnconfigure(1, minsize=minColumnWidth)
+qsoFrame.grid_columnconfigure(2, minsize=minColumnWidth)
+qsoFrame.grid_columnconfigure(3, minsize=minColumnWidth)
+qsoFrame.grid_columnconfigure(4, minsize=minColumnWidth)
+qsoFrame.grid_columnconfigure(5, minsize=minColumnWidth)
+qsoFrame.grid_columnconfigure(6, minsize=minColumnWidth)
+qsoFrame.grid_columnconfigure(7, minsize=minColumnWidth)
+qsoFrame.grid_columnconfigure(8, minsize=minColumnWidth)
 
 # QSO Entry Frame
 callsignLabel = Label(qsoFrame, text="Callsign")  # Create a label widget
 callsignLabel.grid(row=0, column=0)  # Put the label into the window
-callsignEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+callsignEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 callsignEntry.grid(row=1, column=0)  # Set the input box position
 
 nameLabel = Label(qsoFrame, text="Name")  # Create a label widget
 nameLabel.grid(row=0, column=1)  # Put the label into the window
-nameEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+nameEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 nameEntry.grid(row=1, column=1)  # Set the input box position
 
 dateLabel = Label(qsoFrame, text="Date")  # Create a label widget
 dateLabel.grid(row=0, column=2)  # Put the label into the window
-dateEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+dateEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 dateEntry.grid(row=1, column=2)  # Set the input box position
 
 timeLabel = Label(qsoFrame, text="Time")  # Create a label widget
 timeLabel.grid(row=0, column=3)  # Put the label into the window
-timeEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+timeEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 timeEntry.grid(row=1, column=3)  # Set the input box position
 
 bandLabel = Label(qsoFrame, text="Band")  # Create a label widget
 bandLabel.grid(row=0, column=4)  # Put the label into the window
-bandDropdown = OptionMenu(qsoFrame, band_var, *bands)
-bandDropdown.grid(row=1, column=4, padx=5, pady=5)
-bandDropdown.config(width=6)
+bandMenu = ttk.Combobox(qsoFrame, textvariable=band_var, values=bands, state="normal")
+bandMenu.grid(row=1, column=4, padx=5, pady=5)
+bandMenu.config(width=8)
+attach_autocomplete_to_combobox(bandMenu, bands)
 
 modeLabel = Label(qsoFrame, text="Mode")  # Create a label widget
 modeLabel.grid(row=0, column=6)  # Put the label into the window
-modeDropdown = OptionMenu(qsoFrame, mode_var, *modes)
-modeDropdown.grid(row=1, column=6, padx=5, pady=5)
-modeDropdown.config(width=6)
+modeMenu = ttk.Combobox(qsoFrame, textvariable=mode_var, values=modes, state="normal")
+modeMenu.grid(row=1, column=6, padx=5, pady=5)
+modeMenu.config(width=10)
+attach_autocomplete_to_combobox(modeMenu, modes)
 
 reportLabel = Label(qsoFrame, text="Report")  # Create a label widget
 reportLabel.grid(row=2, column=5)  # Put the label into the window
-reportEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+reportEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 reportEntry.grid(row=3, column=5)  # Set the input box position
 
 propModeLabel = Label(qsoFrame, text="PropMode")  # Create a label widget
 propModeLabel.grid(row=0, column=7)  # Put the label into the window
-propModeDropdown = OptionMenu(qsoFrame, propMode_var, *propModes)
-propModeDropdown.grid(row=1, column=7, padx=5, pady=5)
-propModeDropdown.config(width=10)
+propModeMenu = ttk.Combobox(qsoFrame, textvariable=propMode_var, values=propModes, state="normal")
+propModeMenu.grid(row=1, column=7, padx=5, pady=5)
+propModeMenu.config(width=10)
+attach_autocomplete_to_combobox(propModeMenu, propModes)
 
 satelliteLabel = Label(qsoFrame, text="Satellite")  # Create a label widget
 satelliteLabel.grid(row=0, column=8)  # Put the label into the window
-satelliteEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+satelliteEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 satelliteEntry.grid(row=1, column=8)  # Set the input box position  
 satelliteEntry.insert(0, "None")
 
 gridLabel = Label(qsoFrame, text="Grid")  # Create a label widget
 gridLabel.grid(row=2, column=0)  # Put the label into the window
-gridEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+gridEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 gridEntry.grid(row=3, column=0)  # Set the input box position
 
 countyLabel = Label(qsoFrame, text="County")  # Create a label widget
 countyLabel.grid(row=2, column=1)  # Put the label into the window
-countyEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+countyEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 countyEntry.grid(row=3, column=1)  # Set the input box position
 
 stateLabel = Label(qsoFrame, text="State")  # Create a label widget
 stateLabel.grid(row=2, column=2)  # Put the label into the window
-stateEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+stateEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 stateEntry.grid(row=3, column=2)  # Set the input box position
 
 countryLabel = Label(qsoFrame, text="Country")  # Create a label widget
 countryLabel.grid(row=2, column=3)  # Put the label into the window
-countryEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+countryEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 countryEntry.grid(row=3, column=3)  # Set the input box position
 
 cqLabel = Label(qsoFrame, text="CQ Zone")  # Create a label widget
 cqLabel.grid(row=2, column=4)  # Put the label into the window
-cqEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+cqEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 cqEntry.grid(row=3, column=4)  # Set the input box position
 
 freqLabel = Label(qsoFrame, text="Freq MHz")  # Create a label widget
 freqLabel.grid(row=0, column=5)  # Put the label into the window
-freqEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+freqEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 freqEntry.grid(row=1, column=5)  # Set the input box position
 
 remarksLabel = Label(qsoFrame, text="Remarks")  # Create a label widget
 remarksLabel.grid(row=2, column=6, columnspan=3)  # Put the label into the window
-remarksEntry = Entry(qsoFrame, width=40, borderwidth=5)  # Create an input box
+remarksEntry = Entry(qsoFrame, width=42, borderwidth=2)  # Create an input box
 remarksEntry.grid(row=3, column=6, columnspan=3)  # Set the input box position
 
-qsoNumberEntry = Entry(qsoFrame, width=10, borderwidth=5)  # Create an input box
+qsoNumberEntry = Entry(qsoFrame, width=10, borderwidth=2)  # Create an input box
 qsoNumberEntry.grid(row=5, column=8)  # Set the input box
+
+def display_qso_number(id: int):
+    qsoNumberEntry.delete(0, END)
+    qsoNumberEntry.insert(0, str(id))
+
+# Set the focus order when <Tab> is pressed
+callsignEntry.bind("<Tab>", lambda e: focus_next_widget(e, nameEntry))
+nameEntry.bind("<Tab>", lambda e: focus_next_widget(e, reportEntry))
+reportEntry.bind("<Tab>", lambda e: focus_next_widget(e, remarksEntry))
+remarksEntry.bind("<Tab>", lambda e: focus_next_widget(e, dateEntry))
+dateEntry.bind("<Tab>", lambda e: focus_next_widget(e, timeEntry))
+timeEntry.bind("<Tab>", lambda e: focus_next_widget(e, bandMenu))
+bandMenu.bind("<Tab>", lambda e: focus_next_widget(e, freqEntry))
+freqEntry.bind("<Tab>", lambda e: focus_next_widget(e, modeMenu))
+modeMenu.bind("<Tab>", lambda e: focus_next_widget(e, propModeMenu))
+propModeMenu.bind("<Tab>", lambda e: focus_next_widget(e, satelliteEntry))
+satelliteEntry.bind("<Tab>", lambda e: focus_next_widget(e, gridEntry))
+gridEntry.bind("<Tab>", lambda e: focus_next_widget(e, countyEntry))
+countyEntry.bind("<Tab>", lambda e: focus_next_widget(e, stateEntry))
+stateEntry.bind("<Tab>", lambda e: focus_next_widget(e, countryEntry))
+countryEntry.bind("<Tab>", lambda e: focus_next_widget(e, cqEntry))
+cqEntry.bind("<Tab>", lambda e: focus_next_widget(e, callsignEntry))
+callsignEntry.focus_set()
 
 
 # Recent Contacts Frame
-last_qsos = LastQSOs(previewFrame, ldb.conn)
+last_qsos = LastQSOs(previewFrame, ldb.conn, display_qso_number)
 last_qsos.pack(fill="both", expand=True)
 last_qsos.refresh()
 
 
+# Button function (Clear)
+def clear_entries():
+    callsignEntry.delete(0, END)
+    nameEntry.delete(0, END)
+    dateEntry.delete(0, END)
+    timeEntry.delete(0, END)
+    band_var.set(bands[0])
+    mode_var.set(modes[0])
+    reportEntry.delete(0, END)
+    propMode_var.set(propModes[0])
+    satelliteEntry.delete(0, END)
+    satelliteEntry.insert(0, "None")
+    gridEntry.delete(0, END)
+    countyEntry.delete(0, END)
+    stateEntry.delete(0, END)
+    countryEntry.delete(0, END)
+    cqEntry.delete(0, END)
+    freqEntry.delete(0, END)
+    remarksEntry.delete(0, END)
+    display_qso_number(ldb.get_current_row_count() + 1)
+    last_qsos.refresh()
+    callsignEntry.focus_set()
+
+
 # Button function (Lookup)
-def lookup_call():
+def lookup_call(event=None):
     callsignEntry_value = callsignEntry.get().strip().upper()
     if callsignEntry_value == "":
         showWarning("Please enter a callsign to look up.")
@@ -374,7 +467,7 @@ def lookup_call():
 
 
 # Button function (Log QSO)
-def log_qso():
+def log_qso(event=None):
     new_qso = Qso(
         qso_id = qsoNumberEntry.get().strip(),
         callsign = callsignEntry.get().strip().upper(),
@@ -397,7 +490,7 @@ def log_qso():
     )
 
     if not new_qso.is_valid():
-        showWarning("Log QSO", "Please fill in at least Callsign, Date, Time, Band and Mode fields.")
+        showWarning("Please fill in at least Callsign, Date, Time, Band and Mode fields.")
         return
     try:
         if int(new_qso.qso_id) > ldb.get_last_rowid():
@@ -420,39 +513,19 @@ def log_qso():
     clear_entries()
     
 
-# Button function (Clear)
-def clear_entries():
-    callsignEntry.delete(0, END)
-    nameEntry.delete(0, END)
-    dateEntry.delete(0, END)
-    timeEntry.delete(0, END)
-    band_var.set(bands[0])
-    mode_var.set(modes[0])
-    reportEntry.delete(0, END)
-    propMode_var.set(propModes[0])
-    satelliteEntry.delete(0, END)
-    satelliteEntry.insert(0, "None")
-    gridEntry.delete(0, END)
-    countyEntry.delete(0, END)
-    stateEntry.delete(0, END)
-    countryEntry.delete(0, END)
-    cqEntry.delete(0, END)
-    freqEntry.delete(0, END)
-    remarksEntry.delete(0, END)
-    qsoNumberEntry.delete(0, END)
-    qsoNumberEntry.insert(0, str(ldb.get_current_row_count() + 1))
-    last_qsos.refresh()
-
+def next_qso_in_db():
+    display_qso_number(ldb.get_current_row_count() + 1)
+    
 
 def load_qso_from_db():
     rowid = qsoNumberEntry.get().strip()
     if rowid == "":
-        showWarning("Load QSO Entry", "Please enter a QSO number to load.")
+        showWarning("Please enter a QSO number to load.")
         return
     try:
         qso = ldb.fetch_qso_by_id(rowid)
         if qso is None:
-            showWarning("Load QSO Entry", f"No QSO found with ID {rowid}.")
+            showWarning(f"No QSO found with ID {rowid}.")
             return
         # Assuming the order of columns in the database matches the following:
         # (rowid, Call, Name, Date, Time, Band, Mode, Report, PropMode, Satellite, Grid, County, State, Country, CQ, ITU, Remarks, My_Grid)
@@ -486,46 +559,52 @@ def load_qso_from_db():
         remarksEntry.delete(0, END)
         remarksEntry.insert(0, qso[Db.columns.index("Remarks")])
     except Exception as e:
-        showError("Load QSO Entry", f"An error occurred while loading QSO: {str(e)}")
+        showError(f"An error occurred while loading QSO: {str(e)}")
 
 def delete_qso_from_db():
     rowid = qsoNumberEntry.get().strip()
     if rowid == "":
-        showWarning("Delete QSO Entry", "Please enter a QSO number to delete.")
+        showWarning("Please enter a QSO number to delete.")
         return
     try:
         qso = ldb.fetch_qso_by_id(rowid)
         if qso is None:
-            showWarning("Delete QSO Entry", f"No QSO found with ID {rowid}.")
+            showWarning(f"No QSO found with ID {rowid}.")
             return
         confirm = messagebox.askyesno("Delete QSO Entry", f"Are you sure you want to delete QSO ID {rowid}?", parent=app)
         if confirm:
             ldb.delete_qso(rowid)
-            showInfo("Delete QSO Entry", f"QSO ID {rowid} has been deleted.")
+            showInfo(f"QSO ID {rowid} has been deleted.")
             clear_entries()
     except Exception as e:
-        showError("Delete QSO Entry", f"An error occurred while deleting QSO: {str(e)}")
+        showError(f"An error occurred while deleting QSO: {str(e)}")
 
 # Buttons
 lookupButton = Button(qsoFrame, text="Lookup", command=lookup_call)
 lookupButton.grid(row=5, column=0, padx=5, pady=5)
-lookupButton.config(width=10)
+lookupButton.config(width=8)
+callsignEntry.bind("<Return>", lookup_call)
 
 logButton = Button(qsoFrame, text="Log QSO", command=log_qso)
 logButton.grid(row=5, column=1, padx=5, pady=5)
-logButton.config(width=10)
+logButton.config(width=8)
+remarksEntry.bind("<Return>", log_qso)
 
 clearButton = Button(qsoFrame, text="Clear", command=clear_entries)
 clearButton.grid(row=5, column=2, padx=5, pady=5)
-clearButton.config(width=10)
+clearButton.config(width=8)
+
+nextButton = Button(qsoFrame, text="Next Log Entry", command=next_qso_in_db)
+nextButton.grid(row=5, column=5, padx=5, pady=5)
+nextButton.config(width=10)
 
 loadButton = Button(qsoFrame, text="Edit Log Entry", command=load_qso_from_db)
 loadButton.grid(row=5, column=6, padx=5, pady=5)
 loadButton.config(width=10)
 
-loadButton = Button(qsoFrame, text="Delete Log Entry", command=delete_qso_from_db)
-loadButton.grid(row=5, column=7, padx=5, pady=5)
-loadButton.config(width=12)
+deleteButton = Button(qsoFrame, text="Delete Log Entry", command=delete_qso_from_db)
+deleteButton.grid(row=5, column=7, padx=5, pady=5)
+deleteButton.config(width=12)
 
 
 # Configure the menu bar
@@ -539,11 +618,11 @@ app.attributes('-topmost', True)
 app.update()
 
 # Check auto connect and auto upload settings
-if config.get('CAT', 'auto_con'):
+if config.getboolean('CAT', 'auto_con', fallback=False):
     cat_connect()
-if config.get('QRZ', 'upload'):
+if config.getboolean('QRZ', 'upload', fallback=False):
     qrz_login()
-if config.get('LOTW', 'upload'):
+if config.getboolean('LOTW', 'upload', fallback=False):
     lotw_login()
 
 # Keep the window open
