@@ -18,7 +18,7 @@ from tkinter import filedialog
 from tkinter import messagebox
 
 
-appVersion = "0.4"
+appVersion = "0.5"
 app = Tk()
 app.title('QSO Log Book by W9EN - v' + appVersion)
 
@@ -367,26 +367,6 @@ def display_qso_number(id: int):
     qsoNumberEntry.delete(0, END)
     qsoNumberEntry.insert(0, str(id))
 
-# Set the focus order when <Tab> is pressed
-callsignEntry.bind("<Tab>", lambda e: focus_next_widget(e, nameEntry))
-nameEntry.bind("<Tab>", lambda e: focus_next_widget(e, reportEntry))
-reportEntry.bind("<Tab>", lambda e: focus_next_widget(e, remarksEntry))
-remarksEntry.bind("<Tab>", lambda e: focus_next_widget(e, dateEntry))
-dateEntry.bind("<Tab>", lambda e: focus_next_widget(e, timeEntry))
-timeEntry.bind("<Tab>", lambda e: focus_next_widget(e, bandMenu))
-bandMenu.bind("<Tab>", lambda e: focus_next_widget(e, freqEntry))
-freqEntry.bind("<Tab>", lambda e: focus_next_widget(e, modeMenu))
-modeMenu.bind("<Tab>", lambda e: focus_next_widget(e, propModeMenu))
-propModeMenu.bind("<Tab>", lambda e: focus_next_widget(e, satelliteEntry))
-satelliteEntry.bind("<Tab>", lambda e: focus_next_widget(e, gridEntry))
-gridEntry.bind("<Tab>", lambda e: focus_next_widget(e, countyEntry))
-countyEntry.bind("<Tab>", lambda e: focus_next_widget(e, stateEntry))
-stateEntry.bind("<Tab>", lambda e: focus_next_widget(e, countryEntry))
-countryEntry.bind("<Tab>", lambda e: focus_next_widget(e, cqEntry))
-cqEntry.bind("<Tab>", lambda e: focus_next_widget(e, callsignEntry))
-callsignEntry.focus_set()
-
-
 # Recent Contacts Frame
 last_qsos = LastQSOs(previewFrame, ldb.conn, display_qso_number)
 last_qsos.pack(fill="both", expand=True)
@@ -399,8 +379,8 @@ def clear_entries():
     nameEntry.delete(0, END)
     dateEntry.delete(0, END)
     timeEntry.delete(0, END)
-    band_var.set(bands[0])
-    mode_var.set(modes[0])
+    #band_var.set(bands[0])
+    #mode_var.set(modes[0])
     reportEntry.delete(0, END)
     propMode_var.set(propModes[0])
     satelliteEntry.delete(0, END)
@@ -412,7 +392,7 @@ def clear_entries():
     cqEntry.delete(0, END)
     freqEntry.delete(0, END)
     remarksEntry.delete(0, END)
-    display_qso_number(ldb.get_current_row_count() + 1)
+    display_qso_number(ldb.get_last_rowid() + 1)
     last_qsos.refresh()
     callsignEntry.focus_set()
 
@@ -422,10 +402,12 @@ def lookup_call(event=None):
     callsignEntry_value = callsignEntry.get().strip().upper()
     if callsignEntry_value == "":
         showWarning("Please enter a callsign to look up.")
-        return 
+        callsignEntry.focus_set()
+        return "break"
     if not qrz_logged_in:
         showWarning("Please log into QRZ first.")
-        return
+        callsignEntry.focus_set()
+        return "break"
     callsignEntry.delete(0, END)
     callsignEntry.insert(0, callsignEntry_value)
     try:
@@ -462,6 +444,8 @@ def lookup_call(event=None):
             band_var.set(band)
             mode_var.set(mode)
         last_qsos.lookup(callsignEntry_value)
+        nameEntry.focus_set()
+        return "break"
     except Exception as e:
         showError(f"An error occurred during QRZ lookup: {str(e)}")
 
@@ -514,7 +498,7 @@ def log_qso(event=None):
     
 
 def next_qso_in_db():
-    display_qso_number(ldb.get_current_row_count() + 1)
+    display_qso_number(ldb.get_last_rowid() + 1)
     
 
 def load_qso_from_db():
@@ -607,12 +591,31 @@ deleteButton.grid(row=5, column=7, padx=5, pady=5)
 deleteButton.config(width=12)
 
 
+# Set the focus order when <Tab> is pressed
+callsignEntry.bind("<Tab>", lambda e: lookup_call(e))
+nameEntry.bind("<Tab>", lambda e: focus_next_widget(e, reportEntry))
+reportEntry.bind("<Tab>", lambda e: focus_next_widget(e, remarksEntry))
+remarksEntry.bind("<Tab>", lambda e: focus_next_widget(e, dateEntry))
+dateEntry.bind("<Tab>", lambda e: focus_next_widget(e, timeEntry))
+timeEntry.bind("<Tab>", lambda e: focus_next_widget(e, bandMenu))
+bandMenu.bind("<Tab>", lambda e: focus_next_widget(e, freqEntry))
+freqEntry.bind("<Tab>", lambda e: focus_next_widget(e, modeMenu))
+modeMenu.bind("<Tab>", lambda e: focus_next_widget(e, propModeMenu))
+propModeMenu.bind("<Tab>", lambda e: focus_next_widget(e, satelliteEntry))
+satelliteEntry.bind("<Tab>", lambda e: focus_next_widget(e, gridEntry))
+gridEntry.bind("<Tab>", lambda e: focus_next_widget(e, countyEntry))
+countyEntry.bind("<Tab>", lambda e: focus_next_widget(e, stateEntry))
+stateEntry.bind("<Tab>", lambda e: focus_next_widget(e, countryEntry))
+countryEntry.bind("<Tab>", lambda e: focus_next_widget(e, cqEntry))
+cqEntry.bind("<Tab>", lambda e: focus_next_widget(e, callsignEntry))
+callsignEntry.focus_set()
+
+
 # Configure the menu bar
 app.config(menu=menubar)
 
 # Load initial data
-qsoNumberEntry.delete(0, END)
-qsoNumberEntry.insert(0, str(ldb.get_last_rowid() + 1))
+display_qso_number(ldb.get_last_rowid() + 1)
 
 app.attributes('-topmost', True)
 app.update()
