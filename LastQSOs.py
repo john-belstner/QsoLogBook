@@ -64,9 +64,9 @@ class LastQSOs(ttk.Frame):
         }
         widths = {
             "rowid": self.colw(7),
-            "Call": self.colw(9),
-            "Name": self.colw(15),
-            "Date": self.colw(9),
+            "Call": self.colw(8),
+            "Name": self.colw(16),
+            "Date": self.colw(10),
             "Time": self.colw(5),
             "Band": self.colw(5),
             "Freq": self.colw(7),
@@ -89,7 +89,7 @@ class LastQSOs(ttk.Frame):
         sql = """
             SELECT rowid, Call, Name, Date, Time, Band, Freq, Mode, Report, Grid, State, Country
             FROM logbook
-            ORDER BY Date DESC
+            ORDER BY Date DESC, Time DESC
             LIMIT ?
         """
         return self.conn.execute(sql, (limit,)).fetchall()
@@ -100,7 +100,7 @@ class LastQSOs(ttk.Frame):
             SELECT rowid, Call, Name, Date, Time, Band, Freq, Mode, Report, Grid, State, Country
             FROM logbook
             WHERE Call=?
-            ORDER BY Date DESC
+            ORDER BY Date DESC, Time DESC
             LIMIT ?
         """
         return self.conn.execute(sql, (call,limit,)).fetchall()

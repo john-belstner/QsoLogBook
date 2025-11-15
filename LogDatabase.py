@@ -157,7 +157,9 @@ class LogDatabase:
                     qso_id = str(qso_num + 1),
                     callsign=qso_data.get("call", ""),
                     name=qso_data.get("name", ""),
-                    date=qso_data.get("qso_date", ""),
+                    #date=qso_data.get("qso_date", ""),
+                    # Convert date from YYYYMMDD to YYYY-MM-DD
+                    date=f"{qso_data.get('qso_date', '')[0:4]}-{qso_data.get('qso_date', '')[4:6]}-{qso_data.get('qso_date', '')[6:8]}",
                     time=qso_data.get("time_on", ""),
                     band=qso_data.get("band", ""),
                     mode=qso_data.get("mode", ""),

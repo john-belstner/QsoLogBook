@@ -18,10 +18,11 @@ from tkinter import filedialog
 from tkinter import messagebox
 
 
-appVersion = "0.5"
+appVersion = "0.6"
 app = Tk()
 app.title('QSO Log Book by W9EN - v' + appVersion)
 
+POLL_INTERVAL_MS = 5000  # Update the Radio Settings periodically (if connected)
 
 # Some global variables
 band_var = StringVar(app)
@@ -397,6 +398,21 @@ def clear_entries():
     callsignEntry.focus_set()
 
 
+# Periodic CAT update
+def update_radio_settings():
+    if cat and cat_connected:
+        try:
+            freq, band, mode = cat.get_freq_band_mode()
+            #print(f"Freq: {freq}, Band: {band}, Mode: {mode}")
+            freqEntry.delete(0, END)
+            freqEntry.insert(0, freq)
+            band_var.set(band)
+            mode_var.set(mode)
+        except Exception as e:
+            showError(f"An error occurred while updating radio settings: {str(e)}")
+    app.after(POLL_INTERVAL_MS, update_radio_settings)
+
+
 # Button function (Lookup)
 def lookup_call(event=None):
     callsignEntry_value = callsignEntry.get().strip().upper()
@@ -433,7 +449,7 @@ def lookup_call(event=None):
             cqEntry.insert(0, call_info.get('cqzone', ''))
         current_time = datetime.now(timezone.utc)
         dateEntry.delete(0, END)
-        dateEntry.insert(0, current_time.strftime('%Y%m%d'))
+        dateEntry.insert(0, current_time.strftime('%Y-%m-%d'))
         timeEntry.delete(0, END)
         timeEntry.insert(0, current_time.strftime('%H%M'))
         if cat_connected:
@@ -627,6 +643,9 @@ if config.getboolean('QRZ', 'upload', fallback=False):
     qrz_login()
 if config.getboolean('LOTW', 'upload', fallback=False):
     lotw_login()
+
+# Start periodic CAT updates
+app.after(POLL_INTERVAL_MS, update_radio_settings)
 
 # Keep the window open
 app.mainloop()

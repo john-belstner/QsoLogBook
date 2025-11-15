@@ -40,7 +40,7 @@ chmod 0755 $PKGDIR/usr/bin/${APP}
 # Debian Control file
 cat > $PKGDIR/DEBIAN/control << 'EOF'
 Package: qsologbook
-Version: 0.5-1
+Version: 0.6-1
 Section: utils
 Priority: optional
 Architecture: all
@@ -80,7 +80,7 @@ chmod 0755 $PKGDIR/DEBIAN/postrm
 
 # Documentation
 gzip -9c << 'EOF' > $PKGDIR/usr/share/doc/${APP}/changelog.Debian.gz
-qsologbook (0.5-1) stable; urgency=low
+qsologbook (0.6-1) stable; urgency=low
 
   * Initial release.
 

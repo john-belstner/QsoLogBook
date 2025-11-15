@@ -33,7 +33,8 @@ class Qso:
         if self.name:
             adif_str += f"<name:{len(self.name)}>{self.name} "
         if self.date:
-            adif_str += f"<qso_date:{len(self.date)}>{self.date} "
+            adif_date = self.date.replace("-", "")
+            adif_str += f"<qso_date:{len(adif_date)}>{adif_date} "
         if self.time:
             adif_str += f"<time_on:{len(self.time)}>{self.time} "
         if self.band:
