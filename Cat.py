@@ -9,19 +9,19 @@ modes = ["NONE", "SSB", "SSB", "CW", "FM", "AM", "DIGI", "CW", "ERR", "DIGI"]
 class Cat:
 
     def __init__(self, config: configparser.ConfigParser):
-        self._com_port = config['CAT'].get('con_port', '/dev/ttyUSB0')
-        self._baudrate = int(config['CAT'].get('baudrate', '38400'))
-        self._freq_cmd = config['CAT'].get('freq_cmd', 'FA')
-        self._band_cmd = config['CAT'].get('band_cmd', 'BN')
-        self._mode_cmd = config['CAT'].get('mode_cmd', 'MD')
+        self._com_port = config['CAT'].get('com_port', fallback='/dev/ttyUSB0')
+        self._baudrate = int(config['CAT'].get('baudrate', fallback='38400'))
+        self._freq_cmd = config['CAT'].get('freq_cmd', fallback='FA')
+        self._band_cmd = config['CAT'].get('band_cmd', fallback='BN')
+        self._mode_cmd = config['CAT'].get('mode_cmd', fallback='MD')
         self._ser = None
 
     def reload_config(self, config: configparser.ConfigParser):
-        self._com_port = config['CAT'].get('com_port', '/dev/ttyUSB0')
-        self._baudrate = int(config['CAT'].get('baudrate', '38400'))
-        self._freq_cmd = config['CAT'].get('freq_cmd', 'FA')
-        self._band_cmd = config['CAT'].get('band_cmd', 'BN')
-        self._mode_cmd = config['CAT'].get('mode_cmd', 'MD')
+        self._com_port = config['CAT'].get('com_port', fallback='/dev/ttyUSB0')
+        self._baudrate = int(config['CAT'].get('baudrate', fallback='38400'))
+        self._freq_cmd = config['CAT'].get('freq_cmd', fallback='FA')
+        self._band_cmd = config['CAT'].get('band_cmd', fallback='BN')
+        self._mode_cmd = config['CAT'].get('mode_cmd', fallback='MD')
         if self._ser and self._ser.is_open:
             self.disconnect()
             return self.connect()

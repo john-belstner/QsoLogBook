@@ -220,10 +220,18 @@ def config_settings():
             showError(f"Failed to re-log into QRZ. Please check your credentials.")
     # If CAT was connected, reconnect with new settings
     if cat and cat_connected:
-        if cat.reload_config(config):
-            showInfo(f"Successfully reconnected {cat._com_port} at {cat._baudrate} baud.")
+        if config.getboolean('CAT', 'auto_con', fallback=False):
+            if cat.reload_config(config):
+                showInfo(f"Successfully reconnected {cat._com_port} at {cat._baudrate} baud.")
+            else:
+                showError(f"Failed to reconnect on {cat._com_port}.")
         else:
-            showError(f"Failed to reconnect on {cat._com_port}.")
+            cat.disconnect()
+            cat_connected = False
+            showInfo("CAT disconnected due to auto connect being disabled.")
+    elif config.getboolean('CAT', 'auto_con', fallback=False):
+        cat_connect()
+    # If LoTW was initialized, reload its config
     if lotw:
         lotw.reload_config(config)
     # Update my_grid in the database if it was changed
@@ -583,47 +591,39 @@ def delete_qso_from_db():
 lookupButton = Button(qsoFrame, text="Lookup", command=lookup_call)
 lookupButton.grid(row=5, column=0, padx=5, pady=5)
 lookupButton.config(width=8)
-callsignEntry.bind("<Return>", lookup_call)
+lookupButton.bind("<Return>", lambda e: lookup_call())
 
 logButton = Button(qsoFrame, text="Log QSO", command=log_qso)
 logButton.grid(row=5, column=1, padx=5, pady=5)
 logButton.config(width=8)
-remarksEntry.bind("<Return>", log_qso)
+logButton.bind("<Return>", lambda e: log_qso())
 
 clearButton = Button(qsoFrame, text="Clear", command=clear_entries)
 clearButton.grid(row=5, column=2, padx=5, pady=5)
 clearButton.config(width=8)
+clearButton.bind("<Return>", lambda e: clear_entries())
 
 nextButton = Button(qsoFrame, text="Next Log Entry", command=next_qso_in_db)
 nextButton.grid(row=5, column=5, padx=5, pady=5)
 nextButton.config(width=10)
+nextButton.bind("<Return>", lambda e: next_qso_in_db())
 
 loadButton = Button(qsoFrame, text="Edit Log Entry", command=load_qso_from_db)
 loadButton.grid(row=5, column=6, padx=5, pady=5)
 loadButton.config(width=10)
+loadButton.bind("<Return>", lambda e: load_qso_from_db())
 
 deleteButton = Button(qsoFrame, text="Delete Log Entry", command=delete_qso_from_db)
 deleteButton.grid(row=5, column=7, padx=5, pady=5)
 deleteButton.config(width=12)
+deleteButton.bind("<Return>", lambda e: delete_qso_from_db())
 
 
 # Set the focus order when <Tab> is pressed
-callsignEntry.bind("<Tab>", lambda e: lookup_call(e))
+callsignEntry.bind("<Tab>", lambda e: focus_next_widget(e, lookupButton))
 nameEntry.bind("<Tab>", lambda e: focus_next_widget(e, reportEntry))
 reportEntry.bind("<Tab>", lambda e: focus_next_widget(e, remarksEntry))
-remarksEntry.bind("<Tab>", lambda e: focus_next_widget(e, dateEntry))
-dateEntry.bind("<Tab>", lambda e: focus_next_widget(e, timeEntry))
-timeEntry.bind("<Tab>", lambda e: focus_next_widget(e, bandMenu))
-bandMenu.bind("<Tab>", lambda e: focus_next_widget(e, freqEntry))
-freqEntry.bind("<Tab>", lambda e: focus_next_widget(e, modeMenu))
-modeMenu.bind("<Tab>", lambda e: focus_next_widget(e, propModeMenu))
-propModeMenu.bind("<Tab>", lambda e: focus_next_widget(e, satelliteEntry))
-satelliteEntry.bind("<Tab>", lambda e: focus_next_widget(e, gridEntry))
-gridEntry.bind("<Tab>", lambda e: focus_next_widget(e, countyEntry))
-countyEntry.bind("<Tab>", lambda e: focus_next_widget(e, stateEntry))
-stateEntry.bind("<Tab>", lambda e: focus_next_widget(e, countryEntry))
-countryEntry.bind("<Tab>", lambda e: focus_next_widget(e, cqEntry))
-cqEntry.bind("<Tab>", lambda e: focus_next_widget(e, callsignEntry))
+remarksEntry.bind("<Tab>", lambda e: focus_next_widget(e, logButton))
 callsignEntry.focus_set()
 
 
